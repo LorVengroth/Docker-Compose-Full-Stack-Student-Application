@@ -36,7 +36,7 @@ ip a
 
 # to build docker image and create container
 ```bash
-docker compose up -d build
+docker compose up -d --build
 ```
 
 # to check the running container
