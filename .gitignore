@@ -1,0 +1,15 @@
+# Node / Frontend
+student-ui/node_modules/
+student-ui/.next/
+student-ui/out/
+student-ui/build/
+student-ui/.env*.local
+
+# Gradle / Backend
+student-api/.gradle/
+student-api/build/
+student-api/out/
+
+# System & OS
+.DS_Store
+*.log
