@@ -27,6 +27,11 @@ sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin dock
 sudo systemctl status docker
 ```
 
+# Please change your ip in student-ui/app/page.tsx
+```bash
+ip a
+```
+## get the ip from enp0s8 example : 192.168.56.10
 
 
 # to build docker image and create container
