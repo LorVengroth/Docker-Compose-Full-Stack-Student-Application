@@ -1,0 +1,119 @@
+pipeline {
+  
+    agent none
+
+    environment {
+        DEPLOY_ACTION = ''
+        CLEAN_VOLUMES = ''
+        DEPLOY_ENV = ''
+    }
+
+    stages {
+        
+        stage('Test & Build Frontend') {
+            agent {
+                docker {
+                    image 'node:18-alpine'
+                }
+            }
+            steps {
+                echo '=== Running Frontend Verification in Node Container ==='
+                sh 'node -v'
+                sh 'npm -v'
+         
+            }
+        }
+
+   
+        stage('Test & Build Backend') {
+            agent {
+                docker {
+                    image 'maven:3.8.5-openjdk-17'
+                }
+            }
+            steps {
+                echo '=== Running Backend Verification in Java Container ==='
+                sh 'mvn -version'
+       
+            }
+        }
+
+        
+        stage('Deployment Approval Gate') {
+            agent none
+            steps {
+                echo '=== Pipeline paused: Waiting for manual approval (Zero Resource Held) ==='
+                timeout(time: 15, unit: 'MINUTES') {
+                    script {
+                        def userInput = input(
+                            id: 'DeployGate',
+                            message: 'Do you approve the deployment to the target server?',
+                            ok: 'Confirm & Execute',
+                            parameters: [
+                                choice(
+                                    name: 'TARGET_ENVIRONMENT',
+                                    choices: ['Production', 'Staging'],
+                                    description: 'Select the destination environment'
+                                ),
+                                choice(
+                                    name: 'ACTION',
+                                    choices: ['Standard Deploy (Recreate)', 'Rolling Restart', 'Tear Down (Stop Only)'],
+                                    description: 'Select the deployment action for Docker Compose'
+                                ),
+                                booleanParam(
+                                    name: 'REMOVE_OLD_VOLUMES',
+                                    defaultValue: false,
+                                    description: 'Check to wipe database volumes (docker compose down -v)'
+                                )
+                            ]
+                        )
+
+                        env.DEPLOY_ENV = userInput.TARGET_ENVIRONMENT
+                        env.DEPLOY_ACTION = userInput.ACTION
+                        env.CLEAN_VOLUMES = userInput.REMOVE_OLD_VOLUMES
+                    }
+                }
+            }
+        }
+
+
+        stage('Execute Deployment') {
+            agent any
+            steps {
+                echo "=== Executing deployment to: ${env.DEPLOY_ENV} ==="
+
+                script {
+                    if (env.DEPLOY_ACTION == 'Tear Down (Stop Only)') {
+                        sh 'docker compose down'
+                    } else {
+                        if (env.CLEAN_VOLUMES == 'true') {
+                            sh 'docker compose down -v'
+                        } else {
+                            sh 'docker compose down'
+                        }
+                        sh 'docker compose up -d --build'
+                    }
+                }
+            }
+        }
+
+
+        stage('Health Check') {
+            agent any
+            steps {
+                echo '=== Verifying service health after deployment ==='
+                sleep time: 5, unit: 'SECONDS'
+                sh 'docker compose ps'
+            }
+        }
+    }
+
+    post {
+        aborted {
+            echo 'Pipeline was aborted by the user.'
+        }
+        failure {
+            echo 'Pipeline execution encountered a failure!'
+        }
+    }
+}
