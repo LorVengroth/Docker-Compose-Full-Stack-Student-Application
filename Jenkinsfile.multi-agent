@@ -18,7 +18,7 @@ pipeline {
             }
             steps {
                 echo '=== Running Frontend Lint / Test ==='
-                dir('frontend') {
+                dir('student-ui') {
                     sh 'node -v'
                     sh 'npm -v'
                
@@ -37,7 +37,7 @@ pipeline {
             }
             steps {
                 echo '=== Running Backend Unit Tests ==='
-                dir('backend') {
+                dir('student-api') {
                     sh 'mvn -version'
                    
                     sh 'mvn clean test'
