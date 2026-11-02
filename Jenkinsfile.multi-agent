@@ -24,7 +24,7 @@ pipeline {
                     sh 'npm -v'
                
                     sh 'npm install'
-                    // sh 'npm test -- --watchAll=false'
+              
                 }
             }
         }
