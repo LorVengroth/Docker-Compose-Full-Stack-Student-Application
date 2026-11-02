@@ -1,40 +1,47 @@
 pipeline {
-  
+
     agent none
 
     environment {
         DEPLOY_ACTION = ''
-        CLEAN_VOLUMES = ''
-        DEPLOY_ENV = ''
+        CLEAN_VOLUMES = 'false'
+        DEPLOY_ENV    = ''
     }
 
     stages {
-        
-        stage('Test & Build Frontend') {
+  
+        stage('Test & Verify Frontend') {
             agent {
                 docker {
                     image 'node:18-alpine'
                 }
             }
             steps {
-                echo '=== Running Frontend Verification in Node Container ==='
-                sh 'node -v'
-                sh 'npm -v'
-         
+                echo '=== Running Frontend Lint / Test ==='
+                dir('frontend') {
+                    sh 'node -v'
+                    sh 'npm -v'
+               
+                    sh 'npm ci'
+                    sh 'npm test -- --watchAll=false'
+                }
             }
         }
 
-   
-        stage('Test & Build Backend') {
+       
+        stage('Test & Verify Backend') {
             agent {
                 docker {
                     image 'maven:3.8.5-openjdk-17'
                 }
             }
             steps {
-                echo '=== Running Backend Verification in Java Container ==='
-                sh 'mvn -version'
-       
+                echo '=== Running Backend Unit Tests ==='
+                dir('backend') {
+                    sh 'mvn -version'
+                   
+                    sh 'mvn clean test'
+                }
             }
         }
 
@@ -68,9 +75,10 @@ pipeline {
                             ]
                         )
 
-                        env.DEPLOY_ENV = userInput.TARGET_ENVIRONMENT
+                        env.DEPLOY_ENV    = userInput.TARGET_ENVIRONMENT
                         env.DEPLOY_ACTION = userInput.ACTION
-                        env.CLEAN_VOLUMES = userInput.REMOVE_OLD_VOLUMES
+                   
+                        env.CLEAN_VOLUMES = userInput.REMOVE_OLD_VOLUMES.toString()
                     }
                 }
             }
@@ -86,17 +94,18 @@ pipeline {
                     if (env.DEPLOY_ACTION == 'Tear Down (Stop Only)') {
                         sh 'docker compose down'
                     } else {
-                        if (env.CLEAN_VOLUMES == 'true') {
+                        // ពិនិត្យមើលតម្លៃ boolean ឱ្យបានត្រឹមត្រូវ
+                        if (env.CLEAN_VOLUMES.toBoolean()) {
                             sh 'docker compose down -v'
                         } else {
                             sh 'docker compose down'
                         }
+                        // Build Docker image ថ្មី និងរត់ containers នៅ background
                         sh 'docker compose up -d --build'
                     }
                 }
             }
         }
-
 
         stage('Health Check') {
             agent any
@@ -108,9 +117,13 @@ pipeline {
         }
     }
 
+   
     post {
+        success {
+            echo "Pipeline completed and deployed to ${env.DEPLOY_ENV} successfully!"
+        }
         aborted {
-            echo 'Pipeline was aborted by the user.'
+            echo 'Pipeline was aborted by the user or timed out.'
         }
         failure {
             echo 'Pipeline execution encountered a failure!'
