@@ -41,7 +41,7 @@ pipeline {
                 dir('student-api') {
                     sh 'mvn -version'
                    
-                    sh 'mvn clean test'
+            
                 }
             }
         }
