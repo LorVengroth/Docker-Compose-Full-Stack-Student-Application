@@ -1,13 +1,14 @@
+
+String deployEnv    = 'N/A'
+String deployAction = 'N/A'
+
 pipeline {
 
     agent none
 
     environment {
-        DEPLOY_ACTION = ''
         CLEAN_VOLUMES = 'false'
-        DEPLOY_ENV    = ''
-
-    
+        
         TG_TOKEN   = credentials('TELEGRAM_BOT_TOKEN')
         TG_CHAT_ID = credentials('TELEGRAM_CHAT_ID')
     }
@@ -76,8 +77,9 @@ pipeline {
                             ]
                         )
 
-                        env.DEPLOY_ENV    = userInput.TARGET_ENVIRONMENT
-                        env.DEPLOY_ACTION = userInput.ACTION
+                       
+                        deployEnv         = userInput.TARGET_ENVIRONMENT
+                        deployAction      = userInput.ACTION
                         env.CLEAN_VOLUMES = userInput.REMOVE_OLD_VOLUMES.toString()
                     }
                 }
@@ -88,10 +90,11 @@ pipeline {
         stage('Execute Deployment') {
             agent any
             steps {
-                echo "=== Executing deployment to: ${env.DEPLOY_ENV} ==="
+      
+                echo "=== Executing deployment to: ${deployEnv} ==="
 
                 script {
-                    if (env.DEPLOY_ACTION == 'Tear Down (Stop Only)') {
+                    if (deployAction == 'Tear Down (Stop Only)') {
                         sh 'docker compose down'
                     } else {
                         // Check boolean condition correctly
@@ -128,19 +131,18 @@ pipeline {
                     def statusEmoji = (currentBuild.currentResult == 'SUCCESS') ? '✅' : '❌'
                     def statusText  = currentBuild.currentResult ?: 'UNKNOWN'
 
-                    // Compose notification template using Telegram HTML format
-                    def message = """
-            ${statusEmoji} <b>CI/CD Pipeline Alert</b>
             
-            <b>Project:</b> ${env.JOB_NAME}
-            <b>Build Number:</b> #${env.BUILD_NUMBER}
-            <b>Status:</b> ${statusText}
-            <b>Environment:</b> ${env.DEPLOY_ENV ?: 'N/A'}
-            <b>Action:</b> ${env.DEPLOY_ACTION ?: 'N/A'}
-            <b>Console Log:</b> <a href="${env.BUILD_URL}console">View Jenkins Console</a>
-            """
+                    def message = """
+                    ${statusEmoji} <b>CI/CD Pipeline Alert</b>
+                    
+                    <b>Project:</b> ${env.JOB_NAME}
+                    <b>Build Number:</b> #${env.BUILD_NUMBER}
+                    <b>Status:</b> ${statusText}
+                    <b>Environment:</b> ${deployEnv}
+                    <b>Action:</b> ${deployAction}
+                    <b>Console Log:</b> <a href="${env.BUILD_URL}console">View Jenkins Console</a>
+                    """
 
-                   
                     sh """
                         curl -s -X POST "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
                             -d "chat_id=${TG_CHAT_ID}" \
@@ -152,7 +154,7 @@ pipeline {
         }
 
         success {
-            echo "Pipeline completed and deployed to ${env.DEPLOY_ENV} successfully!"
+            echo "Pipeline completed and deployed to ${deployEnv} successfully!"
         }
         aborted {
             echo 'Pipeline was aborted by the user or timed out.'
