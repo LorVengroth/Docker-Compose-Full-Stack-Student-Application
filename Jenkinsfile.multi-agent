@@ -6,6 +6,10 @@ pipeline {
         DEPLOY_ACTION = ''
         CLEAN_VOLUMES = 'false'
         DEPLOY_ENV    = ''
+
+    
+        TG_TOKEN   = credentials('TELEGRAM_BOT_TOKEN')
+        TG_CHAT_ID = credentials('TELEGRAM_CHAT_ID')
     }
 
     stages {
@@ -22,9 +26,7 @@ pipeline {
                 dir('student-ui') {
                     sh 'node -v'
                     sh 'npm -v'
-               
                     sh 'npm install'
-              
                 }
             }
         }
@@ -40,8 +42,6 @@ pipeline {
                 echo '=== Running Backend Unit Tests ==='
                 dir('student-api') {
                     sh 'mvn -version'
-                   
-            
                 }
             }
         }
@@ -78,7 +78,6 @@ pipeline {
 
                         env.DEPLOY_ENV    = userInput.TARGET_ENVIRONMENT
                         env.DEPLOY_ACTION = userInput.ACTION
-                   
                         env.CLEAN_VOLUMES = userInput.REMOVE_OLD_VOLUMES.toString()
                     }
                 }
@@ -95,13 +94,13 @@ pipeline {
                     if (env.DEPLOY_ACTION == 'Tear Down (Stop Only)') {
                         sh 'docker compose down'
                     } else {
-                        // ពិនិត្យមើលតម្លៃ boolean ឱ្យបានត្រឹមត្រូវ
+                        // Check boolean condition correctly
                         if (env.CLEAN_VOLUMES.toBoolean()) {
                             sh 'docker compose down -v'
                         } else {
                             sh 'docker compose down'
                         }
-                        // Build Docker image ថ្មី និងរត់ containers នៅ background
+                        // Build Docker image and run containers in background
                         sh 'docker compose up -d --build'
                     }
                 }
@@ -119,7 +118,39 @@ pipeline {
     }
 
    
+    
     post {
+        always {
+            // Allocate a lightweight agent on the host to execute the curl command
+            node('built-in') {
+                script {
+                    // Assign emoji and text based on current pipeline status
+                    def statusEmoji = (currentBuild.currentResult == 'SUCCESS') ? '✅' : '❌'
+                    def statusText  = currentBuild.currentResult ?: 'UNKNOWN'
+
+                    // Compose notification template using Telegram HTML format
+                    def message = """
+            ${statusEmoji} <b>CI/CD Pipeline Alert</b>
+            
+            <b>Project:</b> ${env.JOB_NAME}
+            <b>Build Number:</b> #${env.BUILD_NUMBER}
+            <b>Status:</b> ${statusText}
+            <b>Environment:</b> ${env.DEPLOY_ENV ?: 'N/A'}
+            <b>Action:</b> ${env.DEPLOY_ACTION ?: 'N/A'}
+            <b>Console Log:</b> <a href="${env.BUILD_URL}console">View Jenkins Console</a>
+            """
+
+                   
+                    sh """
+                        curl -s -X POST "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
+                            -d "chat_id=${TG_CHAT_ID}" \
+                            -d "parse_mode=HTML" \
+                            --data-urlencode "text=${message}"
+                    """
+                }
+            }
+        }
+
         success {
             echo "Pipeline completed and deployed to ${env.DEPLOY_ENV} successfully!"
         }
