@@ -74,3 +74,8 @@ sudo systemctl --full status jenkins
 
 sudo cat /var/lib/jenkins/secrets/initialAdminPassword
 ```
+# Add Jenkins to Docker group 
+```bash
+sudo usermod -aG docker jenkinssudo usermod -aG docker jenkins
+sudo systemctl restart jenkins
+```
