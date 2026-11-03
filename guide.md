@@ -71,4 +71,6 @@ sudo apt update
 sudo apt install jenkins
 
 sudo systemctl --full status jenkins
+
+sudo cat /var/lib/jenkins/secrets/initialAdminPassword
 ```
