@@ -12,7 +12,7 @@ interface Student {
   imageUrl: string;
 }
 
-const API_BASE = "http://192.168.56.10:8081/api/v1/students";
+const API_BASE = "http://52.62.189.172:8081/api/v1/students";
 
 export default function Home() {
   const [students, setStudents] = useState<Student[]>([]);
