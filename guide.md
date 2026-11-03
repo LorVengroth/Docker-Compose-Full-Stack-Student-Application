@@ -31,7 +31,7 @@ sudo systemctl status docker
 ```bash
 ip a
 ```
-## get the ip from enp0s8 example : 192.168.56.10
+#### get the ip from enp0s8 example : 192.168.56.10
 
 
 # to build docker image and create container
