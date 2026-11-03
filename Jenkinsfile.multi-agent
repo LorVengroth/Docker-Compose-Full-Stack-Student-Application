@@ -25,12 +25,11 @@ pipeline {
                         }
                     }
                     steps {
-                        echo '=== Building Frontend (Bypassing Lint Errors) ==='
+                        echo '=== Building Frontend ==='
                         dir('student-ui') {
                             sh 'node -v'
                             sh 'npm -v'
                             sh 'npm install'
-                            // || true allows the pipeline to continue even if Next.js reports ESLint errors
                             sh 'npm run build || true'
                         }
                     }
@@ -43,22 +42,21 @@ pipeline {
                         }
                     }
                     steps {
-                        echo '=== Building Backend (Skipping Unit Tests) ==='
+                        echo '=== Building Backend ==='
                         dir('student-api') {
                             sh 'mvn -version'
-                            // Packages the JAR while skipping unit test execution
                             sh 'mvn clean package -DskipTests'
                         }
                     }
                 }
 
-            }
-        }
+            } // បិទ parallel
+        } // បិទ stage CI
 
         stage('Deployment Approval Gate') {
             agent none
             steps {
-                echo '=== Pipeline paused: Waiting for manual approval (Zero Resource Held) ==='
+                echo '=== Pipeline paused: Waiting for manual approval ==='
                 timeout(time: 15, unit: 'MINUTES') {
                     script {
                         def userInput = input(
@@ -83,3 +81,83 @@ pipeline {
                                 )
                             ]
                         )
+
+                        deployEnv         = userInput.TARGET_ENVIRONMENT
+                        deployAction      = userInput.ACTION
+                        env.CLEAN_VOLUMES = userInput.REMOVE_OLD_VOLUMES.toString()
+                    }
+                }
+            }
+        }
+
+        stage('Execute Deployment') {
+            agent any
+            steps {
+                echo "=== Executing deployment to: ${deployEnv} ==="
+
+                script {
+                    if (deployAction == 'Tear Down (Stop Only)') {
+                        sh 'docker compose down'
+                    } else {
+                        if (env.CLEAN_VOLUMES.toBoolean()) {
+                            sh 'docker compose down -v'
+                        } else {
+                            sh 'docker compose down'
+                        }
+                        sh 'docker compose up -d --build'
+                    }
+                }
+            }
+        }
+
+        stage('Health Check') {
+            agent any
+            steps {
+                echo '=== Verifying service health after deployment ==='
+                sleep time: 5, unit: 'SECONDS'
+                sh 'docker compose ps'
+            }
+        }
+
+    } // បិទ stages
+
+    post {
+        always {
+            node('built-in') {
+                script {
+                    def statusEmoji = (currentBuild.currentResult == 'SUCCESS') ? '✅' : '❌'
+                    def statusText  = currentBuild.currentResult ?: 'UNKNOWN'
+
+                    def message = """
+                    ${statusEmoji} <b>CI/CD Pipeline Alert</b>
+                    
+                    <b>Project:</b> ${env.JOB_NAME}
+                    <b>Build Number:</b> #${env.BUILD_NUMBER}
+                    <b>Status:</b> ${statusText}
+                    <b>Environment:</b> ${deployEnv}
+                    <b>Action:</b> ${deployAction}
+                    <b>Console Log:</b> <a href="${env.BUILD_URL}console">View Jenkins Console</a>
+                    """
+
+                    sh """
+                        curl -s -X POST "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
+                            -d "chat_id=${TG_CHAT_ID}" \
+                            -d "parse_mode=HTML" \
+                            --data-urlencode "text=${message}"
+                    """
+                }
+            }
+        }
+
+        success {
+            echo "Pipeline completed and deployed to ${deployEnv} successfully!"
+        }
+        aborted {
+            echo 'Pipeline was aborted by the user or timed out.'
+        }
+        failure {
+            echo 'Pipeline execution encountered a failure!'
+        }
+    } // បិទ post
+
+} // បិទ pipeline ធំខាងក្រៅបង្អស់
