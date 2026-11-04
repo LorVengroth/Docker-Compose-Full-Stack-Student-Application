@@ -1,8 +1,10 @@
-String deployEnv    = ''
-String deployAction = ''
-
 pipeline {
     agent any
+
+    environment {
+        DEPLOY_ENV    = ''
+        DEPLOY_ACTION = ''
+    }
 
     stages {
         stage('Build Containers') {
@@ -39,16 +41,12 @@ pipeline {
                             ]
                         )
 
-                        // Safely handle Map return from input
-                        if (userInput instanceof Map) {
-                            deployEnv    = userInput['TARGET_ENVIRONMENT']
-                            deployAction = userInput['ACTION']
-                        } else {
-                            deployAction = userInput.toString()
-                        }
+                        // Direct and simple assignment to environment
+                        env.DEPLOY_ENV    = userInput.TARGET_ENVIRONMENT
+                        env.DEPLOY_ACTION = userInput.ACTION
 
-                        echo "Selected Environment: ${deployEnv}"
-                        echo "Selected Action: ${deployAction}"
+                        echo "Selected Environment: ${env.DEPLOY_ENV}"
+                        echo "Selected Action: ${env.DEPLOY_ACTION}"
                     }
                 }
             }
@@ -56,10 +54,10 @@ pipeline {
 
         stage('Execute Deployment') {
             steps {
-                echo "=== Executing deployment to: ${deployEnv} ==="
+                echo "=== Executing deployment to: ${env.DEPLOY_ENV} ==="
 
                 script {
-                    switch (deployAction) {
+                    switch (env.DEPLOY_ACTION) {
                         case 'Rolling Restart':
                             echo 'Executing rolling update: recreating updated services in-place...'
                             sh 'docker compose up -d --build'
@@ -77,7 +75,7 @@ pipeline {
                             break
 
                         default:
-                            error("Unknown deployment action: ${deployAction}")
+                            error("Unknown deployment action: ${env.DEPLOY_ACTION}")
                             break
                     }
                 }
@@ -98,7 +96,7 @@ pipeline {
             sh 'docker compose ps'
         }
         success {
-            echo "Pipeline deployed to ${deployEnv} successfully!"
+            echo "Pipeline deployed to ${env.DEPLOY_ENV} successfully!"
         }
         aborted {
             echo 'Pipeline was aborted by the user.'
