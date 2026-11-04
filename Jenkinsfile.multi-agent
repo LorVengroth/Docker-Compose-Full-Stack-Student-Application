@@ -20,7 +20,7 @@ pipeline {
                 }
             }
             steps {
-                echo '=== Running Frontend Lint / Test ==='
+                echo '=== Checking Frontend Environment & Dependencies ==='
                 dir('student-ui') {
                     sh 'node -v'
                     sh 'npm -v'
@@ -36,10 +36,18 @@ pipeline {
                 }
             }
             steps {
-                echo '=== Running Backend Unit Tests ==='
+                echo '=== Checking Backend Environment ==='
                 dir('student-api') {
                     sh 'mvn -version'
                 }
+            }
+        }
+
+        stage('Build Docker Containers') {
+            agent any
+            steps {
+                echo '=== Compiling and building all Docker images (Fail-Fast) ==='
+                sh 'docker compose build'
             }
         }
 
@@ -82,14 +90,14 @@ pipeline {
                 script {
                     switch (deployAction) {
                         case 'Rolling Restart':
-                            echo 'Executing rolling update: rebuilding and updating services in-place...'
-                            sh 'docker compose up -d --build'
+                            echo 'Executing rolling update: recreating updated services in-place...'
+                            sh 'docker compose up -d'
                             break
 
                         case 'Standard Deploy (Recreate)':
                             echo 'Executing full recreate: stopping all containers before recreation...'
                             sh 'docker compose down'
-                            sh 'docker compose up -d --build'
+                            sh 'docker compose up -d'
                             break
 
                         case 'Tear Down (Stop Only)':
@@ -117,10 +125,9 @@ pipeline {
 
     post {
         always {
-            
+            // Allocate a lightweight agent on the host to execute the curl command
             node('built-in') {
                 script {
-                    // Assign emoji and text based on current pipeline status
                     def statusEmoji = (currentBuild.currentResult == 'SUCCESS') ? '✅' : '❌'
                     def statusText  = currentBuild.currentResult ?: 'UNKNOWN'
 
