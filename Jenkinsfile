@@ -1,10 +1,8 @@
+String deployEnv = 'Production'
+String deployAction = 'Rolling Restart'
+
 pipeline {
     agent any
-
-    environment {
-        DEPLOY_ENV    = ''
-        DEPLOY_ACTION = ''
-    }
 
     stages {
         stage('Build Containers') {
@@ -41,12 +39,11 @@ pipeline {
                             ]
                         )
 
-                        // Direct and simple assignment to environment
-                        env.DEPLOY_ENV    = userInput.TARGET_ENVIRONMENT
-                        env.DEPLOY_ACTION = userInput.ACTION
+                        deployEnv = userInput['TARGET_ENVIRONMENT']
+                        deployAction = userInput['ACTION']
 
-                        echo "Selected Environment: ${env.DEPLOY_ENV}"
-                        echo "Selected Action: ${env.DEPLOY_ACTION}"
+                        echo "Selected Environment: ${deployEnv}"
+                        echo "Selected Action: ${deployAction}"
                     }
                 }
             }
@@ -54,10 +51,10 @@ pipeline {
 
         stage('Execute Deployment') {
             steps {
-                echo "=== Executing deployment to: ${env.DEPLOY_ENV} ==="
+                echo "=== Executing deployment to: ${deployEnv} ==="
 
                 script {
-                    switch (env.DEPLOY_ACTION) {
+                    switch (deployAction) {
                         case 'Rolling Restart':
                             echo 'Executing rolling update: recreating updated services in-place...'
                             sh 'docker compose up -d --build'
@@ -75,7 +72,7 @@ pipeline {
                             break
 
                         default:
-                            error("Unknown deployment action: ${env.DEPLOY_ACTION}")
+                            error("Unknown deployment action: ${deployAction}")
                             break
                     }
                 }
@@ -96,7 +93,7 @@ pipeline {
             sh 'docker compose ps'
         }
         success {
-            echo "Pipeline deployed to ${env.DEPLOY_ENV} successfully!"
+            echo "Pipeline deployed to ${deployEnv} successfully!"
         }
         aborted {
             echo 'Pipeline was aborted by the user.'
