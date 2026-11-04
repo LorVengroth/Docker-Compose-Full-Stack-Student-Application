@@ -1,4 +1,3 @@
-
 String deployEnv    = 'N/A'
 String deployAction = 'N/A'
 
@@ -7,14 +6,12 @@ pipeline {
     agent none
 
     environment {
-        CLEAN_VOLUMES = 'false'
-        
         TG_TOKEN   = credentials('TELEGRAM_BOT_TOKEN')
         TG_CHAT_ID = credentials('TELEGRAM_CHAT_ID')
     }
 
     stages {
-  
+
         stage('Test & Verify Frontend') {
             agent {
                 docker {
@@ -32,7 +29,6 @@ pipeline {
             }
         }
 
-       
         stage('Test & Verify Backend') {
             agent {
                 docker {
@@ -47,7 +43,6 @@ pipeline {
             }
         }
 
-        
         stage('Deployment Approval Gate') {
             agent none
             steps {
@@ -66,45 +61,45 @@ pipeline {
                                 ),
                                 choice(
                                     name: 'ACTION',
-                                    choices: ['Standard Deploy (Recreate)', 'Rolling Restart', 'Tear Down (Stop Only)'],
+                                    choices: ['Rolling Restart', 'Standard Deploy (Recreate)', 'Tear Down (Stop Only)'],
                                     description: 'Select the deployment action for Docker Compose'
-                                ),
-                                booleanParam(
-                                    name: 'REMOVE_OLD_VOLUMES',
-                                    defaultValue: false,
-                                    description: 'Check to wipe database volumes (docker compose down -v)'
                                 )
                             ]
                         )
 
-                       
-                        deployEnv         = userInput.TARGET_ENVIRONMENT
-                        deployAction      = userInput.ACTION
-                        env.CLEAN_VOLUMES = userInput.REMOVE_OLD_VOLUMES.toString()
+                        deployEnv    = userInput.TARGET_ENVIRONMENT
+                        deployAction = userInput.ACTION
                     }
                 }
             }
         }
 
-
         stage('Execute Deployment') {
             agent any
             steps {
-      
                 echo "=== Executing deployment to: ${deployEnv} ==="
 
                 script {
-                    if (deployAction == 'Tear Down (Stop Only)') {
-                        sh 'docker compose down'
-                    } else {
-                        // Check boolean condition correctly
-                        if (env.CLEAN_VOLUMES.toBoolean()) {
-                            sh 'docker compose down -v'
-                        } else {
+                    switch (deployAction) {
+                        case 'Rolling Restart':
+                            echo 'Executing rolling update: rebuilding and updating services in-place...'
+                            sh 'docker compose up -d --build'
+                            break
+
+                        case 'Standard Deploy (Recreate)':
+                            echo 'Executing full recreate: stopping all containers before recreation...'
                             sh 'docker compose down'
-                        }
-                        // Build Docker image and run containers in background
-                        sh 'docker compose up -d --build'
+                            sh 'docker compose up -d --build'
+                            break
+
+                        case 'Tear Down (Stop Only)':
+                            echo 'Tearing down all containers and networks...'
+                            sh 'docker compose down'
+                            break
+
+                        default:
+                            error("Unknown deployment action: ${deployAction}")
+                            break
                     }
                 }
             }
@@ -120,19 +115,15 @@ pipeline {
         }
     }
 
-
-   
-    
     post {
         always {
-            // Allocate a lightweight agent on the host to execute the curl command
+            
             node('built-in') {
                 script {
                     // Assign emoji and text based on current pipeline status
                     def statusEmoji = (currentBuild.currentResult == 'SUCCESS') ? '✅' : '❌'
                     def statusText  = currentBuild.currentResult ?: 'UNKNOWN'
 
-            
                     def message = """
                     ${statusEmoji} <b>CI/CD Pipeline Alert</b>
                     
