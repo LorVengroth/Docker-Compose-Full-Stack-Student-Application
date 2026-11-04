@@ -1,3 +1,6 @@
+String deployEnv    = ''
+String deployAction = ''
+
 pipeline {
     agent any
 
@@ -10,38 +13,53 @@ pipeline {
         }
 
         stage('Deployment Approval Gate') {
-            input {
-                message 'Do you approve the deployment to the target server?'
-                ok 'Confirm & Execute'
-                parameters {
-                    choice(
-                        name: 'DEPLOY_ENV',
-                        choices: ['Production', 'Staging'],
-                        description: 'Select the destination environment'
-                    )
-                    choice(
-                        name: 'DEPLOY_ACTION',
-                        choices: [
-                            'Rolling Restart',
-                            'Standard Deploy (Recreate)',
-                            'Tear Down (Stop Only)'
-                        ],
-                        description: 'Select the deployment action for Docker Compose'
-                    )
-                }
-            }
             steps {
-                echo "Selected Environment: ${env.DEPLOY_ENV}"
-                echo "Selected Action: ${env.DEPLOY_ACTION}"
+                echo '=== Pipeline paused: Waiting for manual approval ==='
+                timeout(time: 15, unit: 'MINUTES') {
+                    script {
+                        def userInput = input(
+                            id: 'DeployGate',
+                            message: 'Do you approve the deployment to the target server?',
+                            ok: 'Confirm & Execute',
+                            parameters: [
+                                choice(
+                                    name: 'TARGET_ENVIRONMENT',
+                                    choices: ['Production', 'Staging'],
+                                    description: 'Select the destination environment'
+                                ),
+                                choice(
+                                    name: 'ACTION',
+                                    choices: [
+                                        'Rolling Restart',
+                                        'Standard Deploy (Recreate)',
+                                        'Tear Down (Stop Only)'
+                                    ],
+                                    description: 'Select the deployment action for Docker Compose'
+                                )
+                            ]
+                        )
+
+                        // Safely handle Map return from input
+                        if (userInput instanceof Map) {
+                            deployEnv    = userInput['TARGET_ENVIRONMENT']
+                            deployAction = userInput['ACTION']
+                        } else {
+                            deployAction = userInput.toString()
+                        }
+
+                        echo "Selected Environment: ${deployEnv}"
+                        echo "Selected Action: ${deployAction}"
+                    }
+                }
             }
         }
 
         stage('Execute Deployment') {
             steps {
-                echo "=== Executing deployment to: ${env.DEPLOY_ENV} ==="
+                echo "=== Executing deployment to: ${deployEnv} ==="
 
                 script {
-                    switch (env.DEPLOY_ACTION) {
+                    switch (deployAction) {
                         case 'Rolling Restart':
                             echo 'Executing rolling update: recreating updated services in-place...'
                             sh 'docker compose up -d --build'
@@ -59,7 +77,7 @@ pipeline {
                             break
 
                         default:
-                            error("Unknown deployment action: ${env.DEPLOY_ACTION}")
+                            error("Unknown deployment action: ${deployAction}")
                             break
                     }
                 }
@@ -80,7 +98,7 @@ pipeline {
             sh 'docker compose ps'
         }
         success {
-            echo "Pipeline deployed to ${env.DEPLOY_ENV} successfully!"
+            echo "Pipeline deployed to ${deployEnv} successfully!"
         }
         aborted {
             echo 'Pipeline was aborted by the user.'
