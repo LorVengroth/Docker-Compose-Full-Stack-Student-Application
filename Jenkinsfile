@@ -3,7 +3,6 @@ pipeline {
 
     environment {
         DEPLOY_ACTION = ''
-        CLEAN_VOLUMES = ''
         DEPLOY_ENV = ''
     }
 
@@ -32,20 +31,18 @@ pipeline {
                                 ),
                                 choice(
                                     name: 'ACTION',
-                                    choices: ['Standard Deploy (Recreate)', 'Rolling Restart', 'Tear Down (Stop Only)'],
+                                    choices: [
+                                        'Rolling Restart',
+                                        'Standard Deploy (Recreate)',
+                                        'Tear Down (Stop Only)'
+                                    ],
                                     description: 'Select the deployment action for Docker Compose'
-                                ),
-                                booleanParam(
-                                    name: 'REMOVE_OLD_VOLUMES',
-                                    defaultValue: false,
-                                    description: 'Check to wipe database volumes (docker compose down -v)'
                                 )
                             ]
                         )
 
                         env.DEPLOY_ENV = userInput.TARGET_ENVIRONMENT
                         env.DEPLOY_ACTION = userInput.ACTION
-                        env.CLEAN_VOLUMES = userInput.REMOVE_OLD_VOLUMES
                     }
                 }
             }
@@ -56,15 +53,26 @@ pipeline {
                 echo "=== Executing deployment to: ${env.DEPLOY_ENV} ==="
 
                 script {
-                    if (env.DEPLOY_ACTION == 'Tear Down (Stop Only)') {
-                        sh 'docker compose down'
-                    } else {
-                        if (env.CLEAN_VOLUMES == 'true') {
-                            sh 'docker compose down -v'
-                        } else {
+                    switch (env.DEPLOY_ACTION) {
+                        case 'Rolling Restart':
+                            echo 'Executing rolling update: recreating updated services in-place...'
+                            sh 'docker compose up -d'
+                            break
+
+                        case 'Standard Deploy (Recreate)':
+                            echo 'Executing full recreate: stopping all containers before recreation...'
                             sh 'docker compose down'
-                        }
-                        sh 'docker compose up -d'
+                            sh 'docker compose up -d'
+                            break
+
+                        case 'Tear Down (Stop Only)':
+                            echo 'Tearing down all containers and networks...'
+                            sh 'docker compose down'
+                            break
+
+                        default:
+                            error("Unknown deployment action: ${env.DEPLOY_ACTION}")
+                            break
                     }
                 }
             }
