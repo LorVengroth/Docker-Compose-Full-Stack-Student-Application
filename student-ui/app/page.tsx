@@ -12,7 +12,7 @@ interface Student {
   imageUrl: string;
 }
 
-
+// ប្រើ Relative Path ដើម្បីឱ្យ Nginx Reverse Proxy បញ្ជូនទៅ Backend ដោយស្វ័យប្រវត្ត
 const API_BASE = "/api/v1/students";
 
 export default function Home() {
@@ -161,58 +161,4 @@ export default function Home() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1.5">Nationality</label>
-                <input
-                  required
-                  placeholder="e.g. Cambodian"
-                  value={form.nationality}
-                  onChange={(e) => setForm({ ...form, nationality: e.target.value })}
-                  className="w-full bg-slate-900/60 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1.5">Photo URL</label>
-                <input
-                  required
-                  placeholder="https://images.unsplash.com/..."
-                  value={form.imageUrl}
-                  onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
-                  className="w-full bg-slate-900/60 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
-                />
-              </div>
-            </div>
-
-            <div className="pt-2">
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full sm:w-auto px-6 py-2.5 bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white font-medium text-sm rounded-xl shadow-lg shadow-indigo-500/25 transition duration-200 transform active:scale-95 disabled:opacity-50 cursor-pointer"
-              >
-                {loading ? "Adding..." : "+ Add Student"}
-              </button>
-            </div>
-          </form>
-        </div>
-
-        {/* Student Cards Section */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-white tracking-wide">
-              Registered Students
-            </h2>
-            <span className="text-xs bg-slate-800 text-slate-400 py-1 px-3 rounded-full border border-slate-700">
-              Total: {students.length}
-            </span>
-          </div>
-
-          {students.length === 0 ? (
-            <div className="text-center py-12 border border-dashed border-slate-700 rounded-2xl bg-slate-800/20">
-              <p className="text-slate-400 text-sm">No students registered yet. Add one above!</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {students.map((student) => (
-                <div
-                  key={student.id}
-                  className="group relative bg-slate-800/7
+                <label className="block text-xs font-medium text-slate-300 mb-1.5">Nationality</
