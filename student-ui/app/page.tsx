@@ -12,7 +12,6 @@ interface Student {
   imageUrl: string;
 }
 
-// ប្រើ Relative Path ដើម្បីឱ្យ Nginx Reverse Proxy បញ្ជូនទៅ Backend ដោយស្វ័យប្រវត្ត
 const API_BASE = "/api/v1/students";
 
 export default function Home() {
@@ -136,29 +135,3 @@ export default function Home() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1.5">Gender</label>
-                <select
-                  value={form.gender}
-                  onChange={(e) => setForm({ ...form, gender: e.target.value })}
-                  className="w-full bg-slate-900/60 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
-                >
-                  <option value="Male">Male</option>
-                  <option value="Female">Female</option>
-                  <option value="Other">Other</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1.5">Age</label>
-                <input
-                  required
-                  type="number"
-                  placeholder="e.g. 21"
-                  value={form.age}
-                  onChange={(e) => setForm({ ...form, age: e.target.value })}
-                  className="w-full bg-slate-900/60 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1.5">Nationality</
