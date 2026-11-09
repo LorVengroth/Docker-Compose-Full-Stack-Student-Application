@@ -75,63 +75,75 @@ export default function Home() {
 
   const handleDelete = async (id: number) => {
     try {
-      const res = await fetch(`${API_BASE}/${id}`, {
-        method: "DELETE",
-      });
-      if (res.ok) {
-        fetchStudents();
-      }
+      const res = await fetch(`${API_BASE}/${id}`, { method: "DELETE" });
+      if (res.ok) fetchStudents();
     } catch (err) {
       console.error("Failed to delete student", err);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 text-slate-100 py-12 px-4 sm:px-6 lg:px-8 font-sans">
-      <div className="max-w-5xl mx-auto space-y-10">
-        
-        {/* Header Section */}
-        <div className="text-center space-y-2">
-          <span className="inline-block py-1 px-3 rounded-full bg-indigo-500/10 text-indigo-400 text-xs font-semibold tracking-wide uppercase border border-indigo-500/20">
-            Student Directory System
-          </span>
-          <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-200 to-indigo-300">
-            Student Management
-          </h1>
-          <p className="text-sm text-slate-400 max-w-md mx-auto">
-            CRUD operations powered by Next.js, Spring Boot, and PostgreSQL.
-          </p>
-        </div>
+    <main className="min-h-screen bg-slate-900 text-slate-100 p-6 md:p-12">
+      <div className="max-w-4xl mx-auto space-y-8">
+        <header className="text-center space-y-2">
+          <h1 className="text-3xl font-bold text-white">Student Management System</h1>
+          <p className="text-slate-400 text-sm">Full-Stack Next.js + Spring Boot + PostgreSQL</p>
+        </header>
 
-        {/* Input Form Card */}
-        <div className="bg-slate-800/80 backdrop-blur-xl border border-slate-700/60 rounded-2xl p-6 sm:p-8 shadow-2xl">
-          <h2 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-pulse"></span>
-            Enroll New Student
-          </h2>
-          
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1.5">First Name</label>
-                <input
-                  required
-                  placeholder="e.g. Sok"
-                  value={form.firstName}
-                  onChange={(e) => setForm({ ...form, firstName: e.target.value })}
-                  className="w-full bg-slate-900/60 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1.5">Last Name</label>
-                <input
-                  required
-                  placeholder="e.g. San"
-                  value={form.lastName}
-                  onChange={(e) => setForm({ ...form, lastName: e.target.value })}
-                  className="w-full bg-slate-900/60 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
-                />
-              </div>
-
-              <div>
+        <section className="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg">
+          <h2 className="text-lg font-semibold mb-4 text-white">Enroll New Student</h2>
+          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <input
+              required
+              placeholder="First Name"
+              value={form.firstName}
+              onChange={(e) => setForm({ ...form, firstName: e.target.value })}
+              className="bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-white"
+            />
+            <input
+              required
+              placeholder="Last Name"
+              value={form.lastName}
+              onChange={(e) => setForm({ ...form, lastName: e.target.value })}
+              className="bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-white"
+            />
+            <select
+              value={form.gender}
+              onChange={(e) => setForm({ ...form, gender: e.target.value })}
+              className="bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-white"
+            >
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+              <option value="Other">Other</option>
+            </select>
+            <input
+              required
+              type="number"
+              placeholder="Age"
+              value={form.age}
+              onChange={(e) => setForm({ ...form, age: e.target.value })}
+              className="bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-white"
+            />
+            <input
+              required
+              placeholder="Nationality"
+              value={form.nationality}
+              onChange={(e) => setForm({ ...form, nationality: e.target.value })}
+              className="bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-white"
+            />
+            <input
+              required
+              placeholder="Image URL (https://...)"
+              value={form.imageUrl}
+              onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
+              className="bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-white"
+            />
+            <div className="md:col-span-2">
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full md:w-auto px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg text-sm transition"
+              >
+                {loading ? "Adding..." : "+ Add Student"}
+              </button>
+            </div>
