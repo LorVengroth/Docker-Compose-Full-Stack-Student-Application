@@ -12,7 +12,8 @@ interface Student {
   imageUrl: string;
 }
 
-const API_BASE = "http://52.62.189.172:8081/api/v1/students";
+
+const API_BASE = "/api/v1/students";
 
 export default function Home() {
   const [students, setStudents] = useState<Student[]>([]);
@@ -214,46 +215,4 @@ export default function Home() {
               {students.map((student) => (
                 <div
                   key={student.id}
-                  className="group relative bg-slate-800/70 border border-slate-700/60 rounded-2xl p-5 shadow-lg hover:shadow-indigo-500/10 hover:border-slate-600 transition-all duration-300 flex flex-col justify-between"
-                >
-                  <div className="flex items-center gap-4">
-                    <img
-                      src={student.imageUrl}
-                      alt={student.firstName}
-                      className="w-14 h-14 rounded-full object-cover ring-2 ring-indigo-500/30 group-hover:ring-indigo-500 transition-all duration-300"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src =
-                          "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80";
-                      }}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-base font-semibold text-white truncate">
-                        {student.firstName} {student.lastName}
-                      </h3>
-                      <p className="text-xs text-slate-400">
-                        {student.gender} • {student.age} yrs
-                      </p>
-                      <span className="inline-block mt-1 text-[11px] font-medium px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
-                        {student.nationality}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="mt-5 pt-3 border-t border-slate-700/50 flex justify-end">
-                    <button
-                      onClick={() => handleDelete(student.id)}
-                      className="text-xs text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 py-1 px-3 rounded-lg border border-transparent hover:border-rose-500/20 transition cursor-pointer font-medium"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-      </div>
-    </div>
-  );
-}
+                  className="group relative bg-slate-800/7
