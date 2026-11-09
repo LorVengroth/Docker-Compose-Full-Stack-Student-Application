@@ -25,16 +25,18 @@ pipeline {
 
         stage('SonarQube Code Analysis') {
             agent { label 'built-in' }
-            tools {
-                sonarScanner 'SonarQubeScanner'
-            }
             steps {
                 script {
                     withSonarQubeEnv('SonarQube-Server') {
+                        // ប្រើ Docker CLI របស់ SonarQube ដោយផ្ទាល់
                         sh '''
-                            sonar-scanner \
+                            docker run --rm \
+                              -e SONAR_HOST_URL="${SONAR_HOST_URL}" \
+                              -e SONAR_TOKEN="${SONAR_AUTH_TOKEN}" \
+                              -v "${WORKSPACE}:/usr/src" \
+                              sonarsource/sonar-scanner-cli:latest \
                               -Dsonar.projectKey=student-fullstack-app \
-                              -Dsonar.sources=. \
+                              -Dsonar.sources=/usr/src \
                               -Dsonar.exclusions="**/node_modules/**,**/target/**,.next/**"
                         '''
                     }
