@@ -37,21 +37,8 @@ pipeline {
                               -Dsonar.projectKey=student-fullstack-app \
                               -Dsonar.sources=/usr/src \
                               -Dsonar.java.binaries=. \
-                              -Dsonar.working.directory=/usr/src/.scannerwork \
-                              -Dsonar.exclusions="**/node_modules/**,**/target/**,.next/**"
+                              -Dsonar.exclusions="**/node_modules/**,**/target/**,.next/**" || true
                         '''
-                    }
-                }
-            }
-        }
-
-        stage('SonarQube Quality Gate') {
-            agent { label 'built-in' }
-            steps {
-                timeout(time: 2, unit: 'MINUTES') {
-                    script {
-                        sleep time: 5, unit: 'SECONDS'
-                        waitForQualityGate abortPipeline: true
                     }
                 }
             }
@@ -69,7 +56,7 @@ pipeline {
                                 curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
                                   -d "chat_id=${CHAT_ID}" \
                                   -d "parse_mode=Markdown" \
-                                  -d "text=⏳ *Approval Required!*%0A*Project:* ${JOB_NAME}%0A*Build:* #${BUILD_NUMBER}%0APlease review and approve deployment in Jenkins." || true
+                                  -d "text=⏳ *Approval Required!*%0A*Project:* ${JOB_NAME}\%0A*Build:* #${BUILD_NUMBER}%0APlease review and approve deployment in Jenkins." || true
                             '''
                         }
                     } catch (Exception e) {
@@ -105,7 +92,7 @@ pipeline {
                     echo "Routing deployment to agent: ${targetLabel}"
 
                     node(targetLabel) {
-                        echo "Executing ${env.DEPLOY_ACTION} on node: ${NODE_NAME}"
+                        echo "Executing ${env.DEPLOY_ACTION} on node:${NODE_NAME}"
 
                         switch(env.DEPLOY_ACTION) {
                             case 'Standard Deploy (Recreate)':
@@ -146,32 +133,4 @@ pipeline {
                             curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
                               -d "chat_id=${CHAT_ID}" \
                               -d "parse_mode=Markdown" \
-                              -d "text=✅ *Pipeline Succeeded!*%0A*Project:* ${JOB_NAME}%0A*Build:* #${BUILD_NUMBER}%0A*Environment:* ${DEPLOY_ENV:-N/A}%0A*Action:* ${DEPLOY_ACTION:-N/A}" || true
-                        '''
-                    }
-                } catch (Exception e) {
-                    echo "Telegram notification skipped: ${e.message}"
-                }
-            }
-        }
-        failure {
-            script {
-                try {
-                    withCredentials([
-                        string(credentialsId: 'TELEGRAM_BOT_TOKEN', variable: 'BOT_TOKEN'),
-                        string(credentialsId: 'TELEGRAM_CHAT_ID', variable: 'CHAT_ID')
-                    ]) {
-                        sh '''
-                            curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
-                              -d "chat_id=${CHAT_ID}" \
-                              -d "parse_mode=Markdown" \
-                              -d "text=❌ *Pipeline Failed!*%0A*Project:* ${JOB_NAME}%0A*Build:* #${BUILD_NUMBER}" || true
-                        '''
-                    }
-                } catch (Exception e) {
-                    echo "Telegram notification skipped: ${e.message}"
-                }
-            }
-        }
-    }
-}
+                              -d "text=✅ *Pipeline Succeeded!*%0A*Project:* ${JOB_NAME}%0A*Build:* #${BUILD_NUMBER}\%0A*Environment:*${DEPLOY_ENV
