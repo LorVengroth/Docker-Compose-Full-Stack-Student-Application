@@ -80,6 +80,9 @@ pipeline {
                     echo "Routing deployment to agent node: ${targetLabel}"
 
                     node(targetLabel) {
+                        // ទាញយក source code និង docker-compose.yml មកកាន់ Slave Workspace
+                        checkout scm
+
                         echo "Executing ${env.DEPLOY_ACTION} on node: ${NODE_NAME}"
 
                         switch(env.DEPLOY_ACTION) {
