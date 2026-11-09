@@ -9,27 +9,15 @@ pipeline {
         stage('Verify Environments') {
             parallel {
                 stage('Verify Frontend (Node)') {
-                    agent {
-                        docker {
-                            image 'node:20-alpine'
-                            reuseNode false
-                        }
-                    }
+                    agent { label 'built-in' }
                     steps {
-                        sh 'node -v'
-                        sh 'npm -v'
+                        sh 'docker run --rm node:20-alpine sh -c "node -v && npm -v"'
                     }
                 }
                 stage('Verify Backend (Maven/Java)') {
-                    agent {
-                        docker {
-                            image 'maven:3.8.5-openjdk-17'
-                            reuseNode false
-                        }
-                    }
+                    agent { label 'built-in' }
                     steps {
-                        sh 'mvn -v'
-                        sh 'java -version'
+                        sh 'docker run --rm maven:3.8.5-openjdk-17 sh -c "mvn -v && java -version"'
                     }
                 }
             }
@@ -37,20 +25,17 @@ pipeline {
 
         stage('SonarQube Code Analysis') {
             agent { label 'built-in' }
+            tools {
+                sonarScanner 'SonarQubeScanner'
+            }
             steps {
                 script {
                     withSonarQubeEnv('SonarQube-Server') {
                         sh '''
-                            if command -v sonar-scanner >/dev/null 2>&1; then
-                                sonar-scanner \
-                                  -Dsonar.projectKey=student-fullstack-app \
-                                  -Dsonar.sources=. \
-                                  -Dsonar.exclusions="**/node_modules/**,**/target/**,.next/**"
-                            else
-                                echo "Sonar scanner binary not directly in PATH, attempting fallback..."
-                                cd student-api && mvn clean compile sonar:sonar \
-                                  -Dsonar.projectKey=student-fullstack-app || true
-                            fi
+                            sonar-scanner \
+                              -Dsonar.projectKey=student-fullstack-app \
+                              -Dsonar.sources=. \
+                              -Dsonar.exclusions="**/node_modules/**,**/target/**,.next/**"
                         '''
                     }
                 }
@@ -71,6 +56,20 @@ pipeline {
         stage('Deployment Approval Gate') {
             steps {
                 script {
+                    catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
+                        withCredentials([
+                            string(credentialsId: 'TELEGRAM_BOT_TOKEN', variable: 'BOT_TOKEN'),
+                            string(credentialsId: 'TELEGRAM_CHAT_ID', variable: 'CHAT_ID')
+                        ]) {
+                            sh '''
+                                curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
+                                  -d chat_id="${CHAT_ID}" \
+                                  -d parse_mode="Markdown" \
+                                  -d text="⏳ *Approval Required!*%0A*Project:* ${JOB_NAME}%0A*Build:* #${BUILD_NUMBER}%0APlease review and approve deployment in Jenkins." || true
+                            '''
+                        }
+                    }
+
                     def deployInput = input(
                         id: 'DeployGate',
                         message: 'Approve Deployment?',
@@ -97,11 +96,11 @@ pipeline {
             steps {
                 script {
                     def targetLabel = (env.DEPLOY_ENV == 'Production') ? 'production' : 'staging'
-                    echo "Routing deployment to agent with label: ${targetLabel}"
-                    
+                    echo "Routing deployment to agent: ${targetLabel}"
+
                     node(targetLabel) {
                         echo "Executing ${env.DEPLOY_ACTION} on node: ${NODE_NAME}"
-                        
+
                         switch(env.DEPLOY_ACTION) {
                             case 'Standard Deploy (Recreate)':
                                 sh '''
@@ -130,33 +129,34 @@ pipeline {
     }
 
     post {
-        always {
-            cleanWs()
-        }
         success {
-            withCredentials([
-                string(credentialsId: 'TELEGRAM_BOT_TOKEN', variable: 'BOT_TOKEN'),
-                string(credentialsId: 'TELEGRAM_CHAT_ID', variable: 'CHAT_ID')
-            ]) {
-                sh '''
-                    curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
-                      -d chat_id="${CHAT_ID}" \
-                      -d parse_mode="Markdown" \
-                      -d text="✅ *Pipeline Succeeded!*%0A*Project:* ${JOB_NAME}%0A*Build:* #${BUILD_NUMBER}%0A*Environment:* ${DEPLOY_ENV:-N/A}%0A*Action:* ${DEPLOY_ACTION:-N/A}"
-                '''
+            catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
+                withCredentials([
+                    string(credentialsId: 'TELEGRAM_BOT_TOKEN', variable: 'BOT_TOKEN'),
+                    string(credentialsId: 'TELEGRAM_CHAT_ID', variable: 'CHAT_ID')
+                ]) {
+                    sh '''
+                        curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
+                          -d chat_id="${CHAT_ID}" \
+                          -d parse_mode="Markdown" \
+                          -d text="✅ *Pipeline Succeeded!*%0A*Project:* ${JOB_NAME}%0A*Build:* #${BUILD_NUMBER}%0A*Environment:* ${DEPLOY_ENV:-N/A}%0A*Action:* ${DEPLOY_ACTION:-N/A}" || true
+                    '''
+                }
             }
         }
         failure {
-            withCredentials([
-                string(credentialsId: 'TELEGRAM_BOT_TOKEN', variable: 'BOT_TOKEN'),
-                string(credentialsId: 'TELEGRAM_CHAT_ID', variable: 'CHAT_ID')
-            ]) {
-                sh '''
-                    curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
-                      -d chat_id="${CHAT_ID}" \
-                      -d parse_mode="Markdown" \
-                      -d text="❌ *Pipeline Failed!*%0A*Project:* ${JOB_NAME}%0A*Build:* #${BUILD_NUMBER}"
-                '''
+            catchError(buildResult: 'FAILURE', stageResult: 'UNSTABLE') {
+                withCredentials([
+                    string(credentialsId: 'TELEGRAM_BOT_TOKEN', variable: 'BOT_TOKEN'),
+                    string(credentialsId: 'TELEGRAM_CHAT_ID', variable: 'CHAT_ID')
+                ]) {
+                    sh '''
+                        curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
+                          -d chat_id="${CHAT_ID}" \
+                          -d parse_mode="Markdown" \
+                          -d text="❌ *Pipeline Failed!*%0A*Project:* ${JOB_NAME}%0A*Build:* #${BUILD_NUMBER}" || true
+                    '''
+                }
             }
         }
     }
