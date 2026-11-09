@@ -6,6 +6,7 @@ pipeline {
     }
 
     stages {
+        // 1. Verify Environments (Backend & Frontend)
         stage('Verify Environments') {
             parallel {
                 stage('Verify Frontend (Node)') {
@@ -23,6 +24,7 @@ pipeline {
             }
         }
 
+        // 2. SonarQube Scan Analysis
         stage('SonarQube Code Analysis') {
             agent { label 'built-in' }
             steps {
@@ -44,25 +46,10 @@ pipeline {
             }
         }
 
+        // 3. Input Parameter (Select Staging or Production)
         stage('Deployment Approval Gate') {
             steps {
                 script {
-                    try {
-                        withCredentials([
-                            string(credentialsId: 'TELEGRAM_BOT_TOKEN', variable: 'BOT_TOKEN'),
-                            string(credentialsId: 'TELEGRAM_CHAT_ID', variable: 'CHAT_ID')
-                        ]) {
-                            sh '''
-                                curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
-                                  -d "chat_id=${CHAT_ID}" \
-                                  -d "parse_mode=Markdown" \
-                                  -d "text=⏳ *Approval Required!*%0A*Project:* ${JOB_NAME}\%0A*Build:* #${BUILD_NUMBER}%0APlease review and approve deployment in Jenkins." || true
-                            '''
-                        }
-                    } catch (Exception e) {
-                        echo "Telegram notification skipped: ${e.message}"
-                    }
-
                     def deployInput = input(
                         id: 'DeployGate',
                         message: 'Approve Deployment?',
@@ -85,14 +72,15 @@ pipeline {
             }
         }
 
+        // 4. Deploy to Selected Slave Node
         stage('Execute Deployment') {
             steps {
                 script {
                     def targetLabel = (env.DEPLOY_ENV == 'Production') ? 'production' : 'staging'
-                    echo "Routing deployment to agent: ${targetLabel}"
+                    echo "Routing deployment to agent node: ${targetLabel}"
 
                     node(targetLabel) {
-                        echo "Executing ${env.DEPLOY_ACTION} on node:${NODE_NAME}"
+                        echo "Executing ${env.DEPLOY_ACTION} on node: ${NODE_NAME}"
 
                         switch(env.DEPLOY_ACTION) {
                             case 'Standard Deploy (Recreate)':
@@ -123,14 +111,10 @@ pipeline {
 
     post {
         success {
-            script {
-                try {
-                    withCredentials([
-                        string(credentialsId: 'TELEGRAM_BOT_TOKEN', variable: 'BOT_TOKEN'),
-                        string(credentialsId: 'TELEGRAM_CHAT_ID', variable: 'CHAT_ID')
-                    ]) {
-                        sh '''
-                            curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
-                              -d "chat_id=${CHAT_ID}" \
-                              -d "parse_mode=Markdown" \
-                              -d "text=✅ *Pipeline Succeeded!*%0A*Project:* ${JOB_NAME}%0A*Build:* #${BUILD_NUMBER}\%0A*Environment:*${DEPLOY_ENV
+            echo "Pipeline succeeded! Deployed ${env.JOB_NAME} to ${env.DEPLOY_ENV}."
+        }
+        failure {
+            echo "Pipeline failed on build #${BUILD_NUMBER}."
+        }
+    }
+}
