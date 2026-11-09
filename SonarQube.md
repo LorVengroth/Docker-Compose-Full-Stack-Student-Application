@@ -5,3 +5,7 @@ sudo docker run -d --name sonarqube \
   --restart always \
   sonarqube:lts-community
   ```
+## inspect sonarqube log
+```bash
+sudo docker logs -f sonarqube
+```
