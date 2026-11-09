@@ -6,7 +6,7 @@ pipeline {
     }
 
     stages {
-        // 1. Verify Environments (Backend & Frontend)
+       
         stage('Verify Environments') {
             parallel {
                 stage('Verify Frontend (Node)') {
@@ -24,7 +24,6 @@ pipeline {
             }
         }
 
-        // 2. SonarQube Scan Analysis
         stage('SonarQube Code Analysis') {
             agent { label 'built-in' }
             steps {
@@ -46,7 +45,7 @@ pipeline {
             }
         }
 
-        // 3. Input Parameter (Select Staging or Production)
+        
         stage('Deployment Approval Gate') {
             steps {
                 script {
@@ -72,7 +71,7 @@ pipeline {
             }
         }
 
-        // 4. Deploy to Selected Slave Node
+
         stage('Execute Deployment') {
             steps {
                 script {
@@ -80,7 +79,7 @@ pipeline {
                     echo "Routing deployment to agent node: ${targetLabel}"
 
                     node(targetLabel) {
-                        // ទាញយក source code និង docker-compose.yml មកកាន់ Slave Workspace
+                     
                         checkout scm
 
                         echo "Executing ${env.DEPLOY_ACTION} on node: ${NODE_NAME}"
