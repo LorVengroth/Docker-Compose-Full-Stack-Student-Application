@@ -81,7 +81,6 @@ export default function Home() {
       console.error("Failed to delete student", err);
     }
   };
-
   return (
     <main className="min-h-screen bg-slate-900 text-slate-100 p-6 md:p-12">
       <div className="max-w-4xl mx-auto space-y-8">
@@ -147,3 +146,54 @@ export default function Home() {
                 {loading ? "Adding..." : "+ Add Student"}
               </button>
             </div>
+          </form>
+        </section>
+
+        <section className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-semibold text-white">Registered Students</h2>
+            <span className="text-xs bg-slate-800 px-3 py-1 rounded-full border border-slate-700 text-slate-400">
+              Total: {students.length}
+            </span>
+          </div>
+
+          {students.length === 0 ? (
+            <p className="text-slate-400 text-center py-8 border border-dashed border-slate-700 rounded-lg">
+              No students found.
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {students.map((st) => (
+                <div key={st.id} className="bg-slate-800 border border-slate-700 p-4 rounded-xl flex flex-col justify-between">
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={st.imageUrl}
+                      alt={st.firstName}
+                      className="w-12 h-12 rounded-full object-cover bg-slate-700"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src =
+                          "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80";
+                      }}
+                    />
+                    <div>
+                      <h3 className="font-semibold text-white">{st.firstName} {st.lastName}</h3>
+                      <p className="text-xs text-slate-400">{st.gender} • {st.age} yrs • {st.nationality}</p>
+                    </div>
+                  </div>
+                  <div className="mt-4 pt-2 border-t border-slate-700 flex justify-end">
+                    <button
+                      onClick={() => handleDelete(st.id)}
+                      className="text-xs text-rose-400 hover:text-rose-300 font-medium"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
+    </main>
+  );
+}
