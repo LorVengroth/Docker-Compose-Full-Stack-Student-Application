@@ -40,7 +40,6 @@ pipeline {
             steps {
                 script {
                     withSonarQubeEnv('SonarQube-Server') {
-                        // Scan Java backend និង Next.js frontend
                         sh '''
                             if command -v sonar-scanner >/dev/null 2>&1; then
                                 sonar-scanner \
@@ -48,7 +47,7 @@ pipeline {
                                   -Dsonar.sources=. \
                                   -Dsonar.exclusions="**/node_modules/**,**/target/**,.next/**"
                             else
-                                echo "Sonar scanner binary not directly in PATH, trying maven/direct scanner fallback..."
+                                echo "Sonar scanner binary not directly in PATH, attempting fallback..."
                                 cd student-api && mvn clean compile sonar:sonar \
                                   -Dsonar.projectKey=student-fullstack-app || true
                             fi
@@ -70,7 +69,6 @@ pipeline {
         }
 
         stage('Deployment Approval Gate') {
-            agent none
             steps {
                 script {
                     def deployInput = input(
@@ -86,3 +84,80 @@ pipeline {
                                 name: 'ACTION',
                                 choices: ['Standard Deploy (Recreate)', 'Rolling Restart', 'Tear Down (Stop Only)'],
                                 description: 'Select deployment action'
+                            )
+                        ]
+                    )
+                    env.DEPLOY_ENV = deployInput['TARGET_ENV']
+                    env.DEPLOY_ACTION = deployInput['ACTION']
+                }
+            }
+        }
+
+        stage('Execute Deployment') {
+            steps {
+                script {
+                    def targetLabel = (env.DEPLOY_ENV == 'Production') ? 'production' : 'staging'
+                    echo "Routing deployment to agent with label: ${targetLabel}"
+                    
+                    node(targetLabel) {
+                        echo "Executing ${env.DEPLOY_ACTION} on node: ${NODE_NAME}"
+                        
+                        switch(env.DEPLOY_ACTION) {
+                            case 'Standard Deploy (Recreate)':
+                                sh '''
+                                    docker compose down || true
+                                    docker compose pull || true
+                                    docker compose up -d --build --remove-orphans
+                                '''
+                                break
+                            case 'Rolling Restart':
+                                sh '''
+                                    docker compose restart
+                                '''
+                                break
+                            case 'Tear Down (Stop Only)':
+                                sh '''
+                                    docker compose down
+                                '''
+                                break
+                            default:
+                                error("Unknown deployment action: ${env.DEPLOY_ACTION}")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            cleanWs()
+        }
+        success {
+            withCredentials([
+                string(credentialsId: 'TELEGRAM_BOT_TOKEN', variable: 'BOT_TOKEN'),
+                string(credentialsId: 'TELEGRAM_CHAT_ID', variable: 'CHAT_ID')
+            ]) {
+                sh '''
+                    curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
+                      -d chat_id="${CHAT_ID}" \
+                      -d parse_mode="Markdown" \
+                      -d text="✅ *Pipeline Succeeded!*%0A*Project:* ${JOB_NAME}%0A*Build:* #${BUILD_NUMBER}%0A*Environment:* ${DEPLOY_ENV:-N/A}%0A*Action:* ${DEPLOY_ACTION:-N/A}"
+                '''
+            }
+        }
+        failure {
+            withCredentials([
+                string(credentialsId: 'TELEGRAM_BOT_TOKEN', variable: 'BOT_TOKEN'),
+                string(credentialsId: 'TELEGRAM_CHAT_ID', variable: 'CHAT_ID')
+            ]) {
+                sh '''
+                    curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
+                      -d chat_id="${CHAT_ID}" \
+                      -d parse_mode="Markdown" \
+                      -d text="❌ *Pipeline Failed!*%0A*Project:* ${JOB_NAME}%0A*Build:* #${BUILD_NUMBER}"
+                '''
+            }
+        }
+    }
+}
