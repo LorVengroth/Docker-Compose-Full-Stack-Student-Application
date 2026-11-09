@@ -37,6 +37,7 @@ pipeline {
                               -Dsonar.projectKey=student-fullstack-app \
                               -Dsonar.sources=/usr/src \
                               -Dsonar.java.binaries=. \
+                              -Dsonar.working.directory=/usr/src/.scannerwork \
                               -Dsonar.exclusions="**/node_modules/**,**/target/**,.next/**"
                         '''
                     }
@@ -49,6 +50,7 @@ pipeline {
             steps {
                 timeout(time: 2, unit: 'MINUTES') {
                     script {
+                        sleep time: 5, unit: 'SECONDS'
                         waitForQualityGate abortPipeline: true
                     }
                 }
