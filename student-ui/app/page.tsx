@@ -12,6 +12,46 @@ interface Student {
   imageUrl: string;
 }
 
+
+// error section
+  // Magic numbers and duplicated logic
+    const calculatePrice = (price) => {
+        return price * 0.15 + price * 0.10;
+    };
+
+    const calculateDiscount = (price) => {
+        return price * 0.15 + price * 0.10;
+    };
+
+    // Empty function
+    const deleteUser = () => {
+    };
+
+    // Unused function
+    const calculateSalary = (salary, bonus) => {
+        return salary + bonus;
+    };
+
+    // Incorrect equality comparison
+    const compareValues = (a, b) => {
+        return a == b;
+    };
+
+    // Unreachable code
+    const testFunction = () => {
+        return true;
+        console.log("Unreachable code");
+    };
+
+    // Incorrect state update pattern
+    const increment = () => {
+        setCount(count + 1);
+        setCount(count + 1);
+    };
+//
+
+
+
 const API_BASE = "/api/v1/students";
 
 export default function Home() {
