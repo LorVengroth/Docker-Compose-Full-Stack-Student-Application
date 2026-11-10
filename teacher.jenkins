@@ -27,7 +27,7 @@ pipeline {
             }
 
             steps{
-                withSonarQubeEnv(credentialsId: 'SONARQUBE-TOKEN', installationName: 'sonarqube-scanner') {
+                withSonarQubeEnv(credentialsId: 'SONARQUBE-TOKEN', installationName: 'SonarQubeScanner') {
                 script{
                     def projectKey = 'reactjs-ite-template' 
                     def projectName = 'ReactjsITEtemplate'
